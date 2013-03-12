@@ -111,6 +111,7 @@ function child_changed(snapshot) {
   // Update our GUI to remove the status of a user who has left.
   userListRef.on("child_removed", function(snapshot) {
     $("#" + snapshot.name()).remove();
+    $("#" + snapshot.name()+"status").remove();
   });
 
   // Update our GUI to change a user"s status.
