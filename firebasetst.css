@@ -82,6 +82,10 @@ em {
 
 /* Drawing */
 
+#canvasdiv {
+  clear: both;
+}
+
 #colorholder {
   width: 480px;
   height: 30px;
