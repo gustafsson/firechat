@@ -135,6 +135,10 @@ em {
   padding: 10px;
 }
 
+.userstatus {
+  font-size: 10px;
+}
+
 /* Tetris */
 
 .tetris-body {

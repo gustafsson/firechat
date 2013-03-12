@@ -93,13 +93,19 @@ resizeMessagesDiv();
     myUserRef.set({ name: name, status: status, hostInfo: hostInfo });
   }
 
+function child_changed(snapshot) {
+    var user = snapshot.val();
+    $("#" + snapshot.name()).text(user.name).attr("title", ''+user.hostInfo);
+    $("#" + snapshot.name()+"status").text(user.status).attr("title", ''+user.hostInfo);
+}
   // Update our GUI to show someone"s online status.
   userListRef.on("child_added", function(snapshot) {
     var user = snapshot.val();
     if (user.hostInfo === undefined)
       user.hostInfo = '';
-    $("#presenceDiv").append($("<div/>").attr("id", snapshot.name()));
-    $("#" + snapshot.name()).text(user.name + " is " + user.status).attr("title", ''+user.hostInfo);
+    $("#presenceDiv").append($("<div/>").attr("id", snapshot.name()))
+                     .append($("<div/>").attr("id", snapshot.name()+"status").addClass('userstatus'));
+    child_changed(snapshot);
   });
 
   // Update our GUI to remove the status of a user who has left.
@@ -108,10 +114,7 @@ resizeMessagesDiv();
   });
 
   // Update our GUI to change a user"s status.
-  userListRef.on("child_changed", function(snapshot) {
-    var user = snapshot.val();
-    $("#" + snapshot.name()).text(user.name + " is " + user.status);
-  });
+  userListRef.on("child_changed", child_changed);
 
   function l0(a) {
     if (a<10)
@@ -153,7 +156,7 @@ resizeMessagesDiv();
   document.onAway = function () {
     //setUserStatus("☄ away");
     var d = new Date();
-    setUserStatus("away (" + today(d) + ', ' + now(d) + ")");
+    setUserStatus("away since " + today(d) + ', ' + now(d));
   }
   document.onBack = function (isIdle, isAway) {
     //setUserStatus("★ online");
