@@ -1,0 +1,278 @@
+<!doctype html>
+<html>
+  <head>
+    <script src='https://cdn.firebase.com/v0/firebase.js'></script>
+    <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js'></script>
+    <script src="https://www.firebase.com/js/libs/idle.js"></script>
+    <link rel='stylesheet' type='text/css' href='firebasetst.css'>
+  </head>
+  <body>
+    <div id="presenceDiv"></div>
+    <div id="chatmessages">
+      <div id='messagesDiv'></div>
+      <input type='text' id='nameInput' placeholder='Name' disabled>
+      <input type='text' id='messageInput' placeholder='Message'>
+      <div>
+        <canvas id="drawing-canvas" width="480" height="420"></canvas>
+      </div>
+      <div id="colorholder"></div>
+    </div>
+    <script>
+    var oldHeight = 0;
+function resizeMessagesDiv(e) {
+    var el = $("#messagesDiv")[0];
+    el.style.height = Math.max(100, window.innerHeight - 100) + 'px';
+};
+$(window).bind('resize', resizeMessagesDiv);
+resizeMessagesDiv();
+    </script>
+<script>
+  var hostInfo = 'no info';
+  var userIp = (function() {
+    if (window.XMLHttpRequest) xmlhttp = new XMLHttpRequest();
+    else xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+
+    xmlhttp.open("GET","http://api.hostip.info/get_html.php",false);
+    xmlhttp.send();
+
+    hostInfo = xmlhttp.responseText;
+
+    hostipInfo = xmlhttp.responseText.split("\n");
+
+    for (i=0; hostipInfo.length >= i; i++) {
+        ipAddress = hostipInfo[i].split(":");
+        if ( ipAddress[0] == "IP" ) return ' @ ' + ipAddress[1];
+    }
+
+    return '';
+  })();
+
+  // Prompt the user for a name to use.
+  var name = prompt("Your name?", "Anonymous coward"),
+      currentStatus = "online";
+
+  if ('null' == name)
+    name = 'Anonymous coward' + userIp;
+
+  $('#nameInput').val(name);
+
+  // Get a reference to the presence data in Firebase.
+  var userListRef = new Firebase("https://cellar.firebaseio.com/presence/");
+
+  // Generate a reference to a new location for my user with push.
+  var myUserRef = userListRef.push();
+
+  // If we lose our internet connection, we want ourselves removed from the list.
+  myUserRef.onDisconnect().remove();
+
+  console.log("before");
+
+  // Get a reference to my own presence status.
+  var connectedRef = new Firebase("https://cellar.firebaseio.com/.info/connected");
+  connectedRef.on("value", function(isOnline) {
+    console.log("Is online: " + isOnline.val());
+    if (isOnline.val()) {
+
+      // Set our initial online status.
+      setUserStatus("online");
+      //setUserStatus("★ online");
+    } else {
+
+      // We need to catch anytime we are marked as offline and then set the correct status. We
+      // could be marked as offline 1) on page load or 2) when we lose our internet connection
+      // temporarily.
+      setUserStatus(currentStatus);
+    }
+  });
+  console.log("after");
+
+  // A helper function to let us set our own state.
+  function setUserStatus(status) {
+    // Set our status in the list of online users.
+    currentStatus = status;
+    myUserRef.set({ name: name, status: status, hostInfo: hostInfo });
+  }
+
+  // Update our GUI to show someone"s online status.
+  userListRef.on("child_added", function(snapshot) {
+    var user = snapshot.val();
+    if (user.hostInfo === undefined)
+      user.hostInfo = '';
+    $("#presenceDiv").append($("<div/>").attr("id", snapshot.name()));
+    $("#" + snapshot.name()).text(user.name + " is " + user.status).attr("title", ''+user.hostInfo);
+  });
+
+  // Update our GUI to remove the status of a user who has left.
+  userListRef.on("child_removed", function(snapshot) {
+    $("#" + snapshot.name()).remove();
+  });
+
+  // Update our GUI to change a user"s status.
+  userListRef.on("child_changed", function(snapshot) {
+    var user = snapshot.val();
+    $("#" + snapshot.name()).text(user.name + " is " + user.status);
+  });
+
+  function l0(a) {
+    if (a<10)
+      return '0' + a;
+    return a;
+  }
+  function month(a) {
+    switch(a) {
+      case 0: return 'Jan';
+      case 1: return 'Feb';
+      case 2: return 'Mar';
+      case 3: return 'Apr';
+      case 4: return 'May';
+      case 5: return 'Jun';
+      case 6: return 'Jul';
+      case 7: return 'Aug';
+      case 8: return 'Sep';
+      case 9: return 'Oct';
+      case 10: return 'Nov';
+      case 11: return 'Dec';
+      default: return 'n/a';
+    }
+  }
+  function today(d) {
+    if (d===undefined)
+      d = new Date();
+    return month(d.getMonth()) + ' ' + d.getDate();
+  }
+  function now(d) {
+    if (d===undefined)
+      d = new Date();
+    return l0(d.getHours()) + ':' + l0(d.getMinutes());
+  }
+  // Use idle/away/back events created by idle.js to update our status information.
+  document.onIdle = function () {
+    //setUserStatus("☆ idle");
+    setUserStatus("idle");
+  }
+  document.onAway = function () {
+    //setUserStatus("☄ away");
+    var d = new Date();
+    setUserStatus("away (" + today(d) + ', ' + now(d) + ")");
+  }
+  document.onBack = function (isIdle, isAway) {
+    //setUserStatus("★ online");
+    setUserStatus("online");
+  }
+
+  setIdleTimeout(5000);
+  setAwayTimeout(10000);
+</script>
+   <script>
+      var lastDatestamp = '';
+      var myDataRef = new Firebase('https://cellar.firebaseio.com/messages/');
+      $('#messageInput').keypress(function (e) {
+        if (e.keyCode == 13) {
+          var name = $('#nameInput').val();
+          var text = $('#messageInput').val();
+          myDataRef.push({name: name, text: text, timestamp: now(), datestamp: today()});
+          $('#messageInput').val('');
+        }
+      });
+      myDataRef.on('child_added', function(snapshot) {
+        var message = snapshot.val();
+        if (message.timestamp === undefined)
+          message.timestamp = '';
+        if (message.datestamp != lastDatestamp)
+        {
+          displayChatMessage(message.datestamp, '', '');
+          lastDatestamp = message.datestamp;
+        }
+        displayChatMessage(message.name+':', message.text, message.timestamp);
+      });
+      function displayChatMessage(name, text, timestamp) {
+        $('<div/>').text(text).prepend($('<em/>').text(name+' ')).prepend($('<span/>').text(timestamp+' ')).appendTo($('#messagesDiv'));
+        $('#messagesDiv')[0].scrollTop = $('#messagesDiv')[0].scrollHeight;
+      };
+    </script>
+<script>
+  $(document).ready(function () {
+    //Set up some globals
+    var pixSize = 8, lastPoint = null, currentColor = "000", mouseDown = 0;
+
+    //Create a reference to the pixel data for our drawing.
+    var pixelDataRef = new Firebase('https://cellar.firebaseio.com/pixels/');
+
+    // Set up our canvas
+    var myCanvas = document.getElementById('drawing-canvas');
+    var myContext = myCanvas.getContext ? myCanvas.getContext('2d') : null;
+    if (myContext == null) {
+      alert("You must use a browser that supports HTML5 Canvas to run this demo.");
+      return;
+    }
+
+    //Setup each color palette & add it to the screen
+    var colors = ["fff","000","f00","0f0","00f","88f","f8d","f88","f05","f80","0f8","cf0","08f","408","ff8","8ff"];
+    for (c in colors) {
+      var item = $('<div/>').css("background-color", '#' + colors[c]).addClass("colorbox");
+      item.click((function () {
+        var col = colors[c];
+        return function () {
+          currentColor = col;
+        };
+      })());
+      item.appendTo('#colorholder');
+    }
+
+    //Keep track of if the mouse is up or down
+    myCanvas.onmousedown = function () {mouseDown = 1;};
+    myCanvas.onmouseout = myCanvas.onmouseup = function () {
+      mouseDown = 0, lastPoint = null;
+    };
+
+    //Draw a line from the mouse's last position to its current position
+    var drawLineOnMouseMove = function(e) {
+      if (!mouseDown) return;
+
+      // Bresenham's line algorithm. We use this to ensure smooth lines are drawn
+      var offset = $('canvas').offset();
+      var x1 = Math.floor((e.pageX - offset.left) / pixSize - 1),
+        y1 = Math.floor((e.pageY - offset.top) / pixSize - 1);
+      var x0 = (lastPoint == null) ? x1 : lastPoint[0];
+      var y0 = (lastPoint == null) ? y1 : lastPoint[1];
+      var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+      var sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1, err = dx - dy;
+      while (true) {
+        //write the pixel into Firebase, or if we are drawing white, remove the pixel
+        pixelDataRef.child(x0 + ":" + y0).set(currentColor === "fff" ? null : currentColor);
+
+        if (x0 == x1 && y0 == y1) break;
+        var e2 = 2 * err;
+        if (e2 > -dy) {
+          err = err - dy;
+          x0 = x0 + sx;
+        }
+        if (e2 < dx) {
+          err = err + dx;
+          y0 = y0 + sy;
+        }
+      }
+      lastPoint = [x1, y1];
+    }
+    $(myCanvas).mousemove(drawLineOnMouseMove);
+    $(myCanvas).mousedown(drawLineOnMouseMove);
+
+    // Add callbacks that are fired any time the pixel data changes and adjusts the canvas appropriately.
+    // Note that child_added events will be fired for initial pixel data as well.
+    var drawPixel = function(snapshot) {
+      var coords = snapshot.name().split(":");
+      myContext.fillStyle = "#" + snapshot.val();
+      myContext.fillRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
+    }
+    var clearPixel = function(snapshot) {
+      var coords = snapshot.name().split(":");
+      myContext.clearRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
+    }
+    pixelDataRef.on('child_added', drawPixel);
+    pixelDataRef.on('child_changed', drawPixel);
+    pixelDataRef.on('child_removed', clearPixel);
+  });
+</script>
+
+  </body>
+</html>
