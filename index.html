@@ -22,32 +22,6 @@
     </div>
     <div id="colorholder"></div>
     <script>
-var chatRef = new Firebase('https://cellar.firebaseio.com/');
-var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
-  if (error) {
-    // an error occurred while attempting login
-    console.log(error);
-  }
-
-  if (user) {
-    // user authenticated with Firebase
-    console.log('Logged in using facebook, received this information:');
-    console.log(user);
-    //goVisibleOnline(user.displayName);
-    goVisibleOnline(user);
-    $('#joinChatButton').addClass('hidden');
-    $('#messageInput').removeClass('hidden');
-  } else {
-    goInvisibleOffline();
-    $('#joinChatButton').removeClass('hidden');
-    $('#messageInput').addClass('hidden');
-  }
-});
-$('#joinChatButton').click(function(){
-  authClient.login('facebook',{rememberMe:true});
-});
-    </script>
-    <script>
     var oldHeight = 0;
 function resizeMessagesDiv(e) {
     var el = $("#messagesDiv")[0];
@@ -339,6 +313,31 @@ resizeMessagesDiv();
     pixelDataRef.on('child_removed', clearPixel);
   });
 </script>
+    <script>
+var chatRef = new Firebase('https://cellar.firebaseio.com/');
+var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
+  if (error) {
+    // an error occurred while attempting login
+    console.log(error);
+  }
 
+  if (user) {
+    // user authenticated with Firebase
+    console.log('Logged in using facebook, received this information:');
+    console.log(user);
+    //goVisibleOnline(user.displayName);
+    goVisibleOnline(user);
+    $('#joinChatButton').addClass('hidden');
+    $('#messageInput').removeClass('hidden');
+  } else {
+    goInvisibleOffline();
+    $('#joinChatButton').removeClass('hidden');
+    $('#messageInput').addClass('hidden');
+  }
+});
+$('#joinChatButton').click(function(){
+  authClient.login('facebook',{rememberMe:true});
+});
+    </script>
   </body>
 </html>
