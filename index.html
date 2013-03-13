@@ -27,9 +27,11 @@ var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
   if (error) {
     // an error occurred while attempting login
     console.log(error);
-  } else if (user) {
+  }
+
+  if (user) {
     // user authenticated with Firebase
-    console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
+    console.log('Logged in using facebook, received this information:');
     console.log(user);
     goVisibleOnline(user.displayName);
     $('#joinChatButton').addClass('hidden');
@@ -100,8 +102,6 @@ resizeMessagesDiv();
 
   // Update our GUI to change a user"s status.
   userListRef.on("child_changed", child_changed);
-  var name = '';
-  var myUserRef = undefined;
 
   function l0(a) {
     if (a<10)
@@ -125,7 +125,7 @@ resizeMessagesDiv();
       default: return 'n/a';
     }
   }
-    
+
   function today(d) {
     if (d===undefined)
       d = new Date();
@@ -137,6 +137,15 @@ resizeMessagesDiv();
     return l0(d.getHours()) + ':' + l0(d.getMinutes());
   }
 
+  var name = '';
+  var myUserRef = undefined;
+  var connectedRef = undefined;
+
+  function goInvisibleOffline() {
+    if (undefined !== myUserRef)
+      myUserRef.remove();
+    myUserRef = undefined;
+  }
   function goVisibleOnline(n) {
     // Prompt the user for a name to use.
     //var name = prompt("Your name?", "Anonymous coward"),
@@ -150,6 +159,7 @@ resizeMessagesDiv();
 
     if (undefined !== myUserRef)
       myUserRef.remove();
+    myUserRef = undefined;
 
     // Generate a reference to a new location for my user with push.
     myUserRef = userListRef.push();
@@ -158,7 +168,9 @@ resizeMessagesDiv();
     myUserRef.onDisconnect().remove();
 
     // Get a reference to my own presence status.
-    var connectedRef = new Firebase("https://cellar.firebaseio.com/.info/connected");
+    if (undefined === connectedRef)
+      connectedRef = new Firebase("https://cellar.firebaseio.com/.info/connected");
+
     connectedRef.on("value", function(isOnline) {
       console.log("Is online: " + isOnline.val());
       if (isOnline.val()) {
