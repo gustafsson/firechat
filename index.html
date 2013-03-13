@@ -93,7 +93,6 @@ resizeMessagesDiv();
 
     if (user.username!==undefined)
     {
-      console.log("https://graph.facebook.com/"+user.username+"/picture");
       $("#" + snapshot.name())
         .append(
           $("<a/>").attr("href","http://www.facebook.com/"+user.username)
@@ -107,11 +106,7 @@ resizeMessagesDiv();
         .attr("id", snapshot.name()+"status")
         .css("vertical-align","text-top")
         .addClass('userstatus'));
-/*    else
-    {
-      $("#" + snapshot.name()).text(' '+user.name).attr("title", ''+user.hostInfo);
-    }
-*/
+
     child_changed(snapshot);
   });
 
