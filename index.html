@@ -4,19 +4,45 @@
     <script src='https://cdn.firebase.com/v0/firebase.js'></script>
     <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js'></script>
     <script src="https://www.firebase.com/js/libs/idle.js"></script>
+    <script type='text/javascript'
+        src='https://cdn.firebase.com/v0/firebase-auth-client.js'>
+    </script>
     <link rel='stylesheet' type='text/css' href='firebasetst.css'>
   </head>
   <body>
     <div id="presenceDiv"></div>
     <div id="chatmessages">
       <div id='messagesDiv'></div>
-      <input type='text' id='nameInput' placeholder='Name' disabled>
-      <input type='text' id='messageInput' placeholder='Message'>
+      <input type='button' id='joinChatButton' value='Join chat with Facebook'>
+      <input type='text' id='nameInput' placeholder='Name' class="hidden">
+      <input type='text' id='messageInput' placeholder='Message' class="hidden">
     </div>
     <div id="canvasdiv">
       <canvas id="drawing-canvas" width="480" height="420"></canvas>
     </div>
     <div id="colorholder"></div>
+    <script>
+var chatRef = new Firebase('https://cellar.firebaseio.com/');
+var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
+  if (error) {
+    // an error occurred while attempting login
+    console.log(error);
+  } else if (user) {
+    // user authenticated with Firebase
+    console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
+    console.log(user);
+    goVisibleOnline(user.displayName);
+    $('#joinChatButton').addClass('hidden');
+    $('#messageInput').removeClass('hidden');
+  } else {
+    $('#joinChatButton').removeClass('hidden');
+    $('#messageInput').addClass('hidden');
+  }
+});
+$('#joinChatButton').click(function(){
+  authClient.login('facebook',{rememberMe:true});
+});
+    </script>
     <script>
     var oldHeight = 0;
 function resizeMessagesDiv(e) {
@@ -47,57 +73,15 @@ resizeMessagesDiv();
     return '';
   })();
 
-  // Prompt the user for a name to use.
-  var name = prompt("Your name?", "Anonymous coward"),
-      currentStatus = "online";
-
-  if ('null' == name)
-    name = 'Anonymous coward' + userIp;
-
-  $('#nameInput').val(name);
-
   // Get a reference to the presence data in Firebase.
   var userListRef = new Firebase("https://cellar.firebaseio.com/presence/");
 
-  // Generate a reference to a new location for my user with push.
-  var myUserRef = userListRef.push();
-
-  // If we lose our internet connection, we want ourselves removed from the list.
-  myUserRef.onDisconnect().remove();
-
-  console.log("before");
-
-  // Get a reference to my own presence status.
-  var connectedRef = new Firebase("https://cellar.firebaseio.com/.info/connected");
-  connectedRef.on("value", function(isOnline) {
-    console.log("Is online: " + isOnline.val());
-    if (isOnline.val()) {
-
-      // Set our initial online status.
-      setUserStatus("online");
-      //setUserStatus("★ online");
-    } else {
-
-      // We need to catch anytime we are marked as offline and then set the correct status. We
-      // could be marked as offline 1) on page load or 2) when we lose our internet connection
-      // temporarily.
-      setUserStatus(currentStatus);
-    }
-  });
-  console.log("after");
-
-  // A helper function to let us set our own state.
-  function setUserStatus(status) {
-    // Set our status in the list of online users.
-    currentStatus = status;
-    myUserRef.set({ name: name, status: status, hostInfo: hostInfo });
+  function child_changed(snapshot) {
+      var user = snapshot.val();
+      $("#" + snapshot.name()).text(user.name).attr("title", ''+user.hostInfo);
+      $("#" + snapshot.name()+"status").text(user.status).attr("title", ''+user.hostInfo);
   }
 
-function child_changed(snapshot) {
-    var user = snapshot.val();
-    $("#" + snapshot.name()).text(user.name).attr("title", ''+user.hostInfo);
-    $("#" + snapshot.name()+"status").text(user.status).attr("title", ''+user.hostInfo);
-}
   // Update our GUI to show someone"s online status.
   userListRef.on("child_added", function(snapshot) {
     var user = snapshot.val();
@@ -116,6 +100,8 @@ function child_changed(snapshot) {
 
   // Update our GUI to change a user"s status.
   userListRef.on("child_changed", child_changed);
+  var name = '';
+  var myUserRef = undefined;
 
   function l0(a) {
     if (a<10)
@@ -139,6 +125,7 @@ function child_changed(snapshot) {
       default: return 'n/a';
     }
   }
+    
   function today(d) {
     if (d===undefined)
       d = new Date();
@@ -149,23 +136,70 @@ function child_changed(snapshot) {
       d = new Date();
     return l0(d.getHours()) + ':' + l0(d.getMinutes());
   }
-  // Use idle/away/back events created by idle.js to update our status information.
-  document.onIdle = function () {
-    //setUserStatus("☆ idle");
-    setUserStatus("idle");
-  }
-  document.onAway = function () {
-    //setUserStatus("☄ away");
-    var d = new Date();
-    setUserStatus("away since " + today(d) + ', ' + now(d));
-  }
-  document.onBack = function (isIdle, isAway) {
-    //setUserStatus("★ online");
-    setUserStatus("online");
-  }
 
-  setIdleTimeout(5000);
-  setAwayTimeout(10000);
+  function goVisibleOnline(n) {
+    // Prompt the user for a name to use.
+    //var name = prompt("Your name?", "Anonymous coward"),
+    //    currentStatus = "online";
+    name = n;
+
+    if ('null' == name)
+      name = 'Anonymous coward' + userIp;
+
+    $('#nameInput').val(name);
+
+    if (undefined !== myUserRef)
+      myUserRef.remove();
+
+    // Generate a reference to a new location for my user with push.
+    myUserRef = userListRef.push();
+
+    // If we lose our internet connection, we want ourselves removed from the list.
+    myUserRef.onDisconnect().remove();
+
+    // Get a reference to my own presence status.
+    var connectedRef = new Firebase("https://cellar.firebaseio.com/.info/connected");
+    connectedRef.on("value", function(isOnline) {
+      console.log("Is online: " + isOnline.val());
+      if (isOnline.val()) {
+
+        // Set our initial online status.
+        setUserStatus("online");
+        //setUserStatus("★ online");
+      } else {
+
+        // We need to catch anytime we are marked as offline and then set the correct status. We
+        // could be marked as offline 1) on page load or 2) when we lose our internet connection
+        // temporarily.
+        setUserStatus(currentStatus);
+      }
+    });
+
+    // A helper function to let us set our own state.
+    function setUserStatus(status) {
+      // Set our status in the list of online users.
+      currentStatus = status;
+      myUserRef.set({ name: name, status: status, hostInfo: hostInfo });
+    }
+
+    // Use idle/away/back events created by idle.js to update our status information.
+    document.onIdle = function () {
+      //setUserStatus("☆ idle");
+      setUserStatus("idle");
+    }
+    document.onAway = function () {
+      //setUserStatus("☄ away");
+      var d = new Date();
+      setUserStatus("away since " + today(d) + ', ' + now(d));
+    }
+    document.onBack = function (isIdle, isAway) {
+      //setUserStatus("★ online");
+      setUserStatus("online");
+    }
+
+    setIdleTimeout(5000);
+    setAwayTimeout(10000);
+  }
 </script>
    <script>
       var lastDatestamp = '';
