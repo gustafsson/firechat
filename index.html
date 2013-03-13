@@ -33,7 +33,8 @@ var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
     // user authenticated with Firebase
     console.log('Logged in using facebook, received this information:');
     console.log(user);
-    goVisibleOnline(user.displayName);
+    //goVisibleOnline(user.displayName);
+    goVisibleOnline(user.first_name);
     $('#joinChatButton').addClass('hidden');
     $('#messageInput').removeClass('hidden');
   } else {
