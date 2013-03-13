@@ -134,6 +134,10 @@ em {
 
 /* Presence */
 
+.presenceUser {
+  clear: both;
+}
+
 #presenceDiv {
   float: right;
   width: 200px;

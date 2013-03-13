@@ -34,10 +34,11 @@ var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
     console.log('Logged in using facebook, received this information:');
     console.log(user);
     //goVisibleOnline(user.displayName);
-    goVisibleOnline(user.first_name);
+    goVisibleOnline(user);
     $('#joinChatButton').addClass('hidden');
     $('#messageInput').removeClass('hidden');
   } else {
+    goInvisibleOffline();
     $('#joinChatButton').removeClass('hidden');
     $('#messageInput').addClass('hidden');
   }
@@ -81,17 +82,36 @@ resizeMessagesDiv();
 
   function child_changed(snapshot) {
       var user = snapshot.val();
-      $("#" + snapshot.name()).text(user.name).attr("title", ''+user.hostInfo);
+      //$("#" + snapshot.name()).text(' '+user.name).attr("title", ''+user.hostInfo);
       $("#" + snapshot.name()+"status").text(user.status).attr("title", ''+user.hostInfo);
   }
 
   // Update our GUI to show someone"s online status.
   userListRef.on("child_added", function(snapshot) {
     var user = snapshot.val();
-    if (user.hostInfo === undefined)
-      user.hostInfo = '';
-    $("#presenceDiv").append($("<div/>").attr("id", snapshot.name()))
-                     .append($("<div/>").attr("id", snapshot.name()+"status").addClass('userstatus'));
+    $("#presenceDiv").append($("<div/>").attr("id", snapshot.name()).addClass("presenceUser"));
+
+    if (user.username!==undefined)
+    {
+      console.log("https://graph.facebook.com/"+user.username+"/picture");
+      $("#" + snapshot.name())
+        .append(
+          $("<a/>").attr("href","http://www.facebook.com/"+user.username)
+          .css("float","left")
+          .append($("<img/>").attr("src","https://graph.facebook.com/"+user.username+"/picture")));
+    }
+    $("#" + snapshot.name())
+      .append($("<span/>").text(' '+user.name))
+      .append($("<br/>"))
+      .append($("<span/>")
+        .attr("id", snapshot.name()+"status")
+        .css("vertical-align","text-top")
+        .addClass('userstatus'));
+/*    else
+    {
+      $("#" + snapshot.name()).text(' '+user.name).attr("title", ''+user.hostInfo);
+    }
+*/
     child_changed(snapshot);
   });
 
@@ -147,11 +167,11 @@ resizeMessagesDiv();
       myUserRef.remove();
     myUserRef = undefined;
   }
-  function goVisibleOnline(n) {
+  function goVisibleOnline(user) {
     // Prompt the user for a name to use.
     //var name = prompt("Your name?", "Anonymous coward"),
     //    currentStatus = "online";
-    name = n;
+    name = user.first_name;
 
     if ('null' == name)
       name = 'Anonymous coward' + userIp;
@@ -192,7 +212,7 @@ resizeMessagesDiv();
     function setUserStatus(status) {
       // Set our status in the list of online users.
       currentStatus = status;
-      myUserRef.set({ name: name, status: status, hostInfo: hostInfo });
+      myUserRef.set({ name: name, status: status, hostInfo: hostInfo, username:user.username });
     }
 
     // Use idle/away/back events created by idle.js to update our status information.
