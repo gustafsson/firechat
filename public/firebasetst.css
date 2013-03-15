@@ -101,7 +101,8 @@ em {
 
 #drawing-canvas {
   margin-top: 20px;
-  border: 3px solid #999
+  border: 3px solid #999;
+  cursor: pointer;
 }
 
 .colorbox {
