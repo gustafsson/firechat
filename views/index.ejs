@@ -26,7 +26,9 @@
     var oldHeight = 0;
 function resizeMessagesDiv(e) {
     var el = $("#messagesDiv")[0];
+    var scrollBottom = el.scrollTop + parseInt(el.style.height);
     el.style.height = Math.max(100, window.innerHeight - 100) + 'px';
+    el.scrollTop = Math.max(0, scrollBottom - parseInt(el.style.height));
 };
 $(window).bind('resize', resizeMessagesDiv);
 resizeMessagesDiv();
