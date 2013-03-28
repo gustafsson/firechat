@@ -14,9 +14,15 @@
     <div id="presenceDiv"></div>
     <div id="chatmessages">
       <div id='messagesDiv'></div>
-      <input type='button' id='joinChatButton' value='Join chat with Facebook'>
+      <span id="loggedout">
+        <input type='button' id='joinChatButton' value='Join chat with Facebook'>
+        <input type='button' id='joinChatChicken' value='Join chat as chicken'>
+      </span>
       <input type='text' id='nameInput' placeholder='Name' class="hidden">
-      <input type='text' id='messageInput' placeholder='Message' class="hidden">
+      <span id="loggedin" class="hidden">
+        <input type='text' id='messageInput' placeholder='Message'>
+        <input type='button' id='leaveChatButton' value='Leave chat'>
+      </span>
     </div>
     <div id="canvasdiv">
       <canvas id="drawing-canvas" width="480" height="420"></canvas>
@@ -139,14 +145,16 @@ resizeMessagesDiv();
       myUserRef.remove();
     myUserRef = undefined;
   }
-  function goVisibleOnline(user) {
+  function goVisibleOnline(first_name, username) {
     // Prompt the user for a name to use.
-    //var name = prompt("Your name?", "Anonymous coward"),
-    //    currentStatus = "online";
-    name = user.first_name;
+    //var name = prompt("Your name?", "Anonymous coward");
+    var currentStatus = "online";
+    name = first_name;
 
-    if ('null' == name)
-      name = 'Anonymous coward' + userIp;
+    console.log('name is: ' + name);
+    if ('null' == name || 'undefined' === name )
+      name = 'Anonymous stalker ' + userIp;
+    console.log('name is now: ' + name);
 
     $('#nameInput').val(name);
 
@@ -182,9 +190,15 @@ resizeMessagesDiv();
 
     // A helper function to let us set our own state.
     function setUserStatus(status) {
+      console.log('name: ' + name);
       // Set our status in the list of online users.
       currentStatus = status;
-      myUserRef.set({ name: name, status: status, hostInfo: hostInfo, username:user.username });
+
+      var data = { name: name, status: status, hostInfo: hostInfo };
+      if (undefined !== username)
+        data.username = username;
+
+      myUserRef.set(data);
     }
 
     // Use idle/away/back events created by idle.js to update our status information.
@@ -205,6 +219,7 @@ resizeMessagesDiv();
     setIdleTimeout(5000);
     setAwayTimeout(10000);
   }
+  goVisibleOnline();
 </script>
    <script>
       var lastDatestamp = '';
@@ -329,18 +344,47 @@ var authClient = new FirebaseAuthClient(chatRef, function(error, user) {
     console.log('Logged in using facebook, received this information:');
     console.log(user);
     //goVisibleOnline(user.displayName);
-    goVisibleOnline(user);
-    $('#joinChatButton').addClass('hidden');
-    $('#messageInput').removeClass('hidden');
+    goVisibleOnline(user.first_name, user.username);
+    $('#loggedout').addClass('hidden');
+    $('#loggedin').removeClass('hidden');
   } else {
     goInvisibleOffline();
-    $('#joinChatButton').removeClass('hidden');
-    $('#messageInput').addClass('hidden');
+    $('#loggedout').removeClass('hidden');
+    $('#loggedin').addClass('hidden');
+    goVisibleOnline();
   }
 });
 $('#joinChatButton').click(function(){
   authClient.login('facebook',{rememberMe:true});
 });
+$('#leaveChatButton').click(function(){
+  goInvisibleOffline();
+  $('#loggedout').removeClass('hidden');
+  $('#loggedin').addClass('hidden');
+  authClient.logout();
+  goVisibleOnline();
+});
+    </script>
+    <script type="text/javascript">
+      $('#joinChatChicken').click(function(){
+        var first_name = prompt("Your name?", "Anonymous chicken");
+        goVisibleOnline(first_name);
+        $('#loggedout').addClass('hidden');
+        $('#loggedin').removeClass('hidden');
+      });
+    </script>
+    <script type="text/javascript">
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-821786-4']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
     </script>
   </body>
 </html>
